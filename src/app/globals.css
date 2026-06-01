@@ -1,26 +1,94 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-caveat);
+  --font-display: var(--font-dancing);
+  --font-readable: var(--font-geist-sans);
+  --color-brand-navy: #0a1f38;
+  --color-brand-navy-dark: #061428;
+  --color-brand-royal: #1e5aa0;
+  --color-brand-royal-bright: #2a6eb8;
+  --color-brand-royal-dark: #164a85;
+  --color-brand-royal-muted: #e6eff8;
+  --color-brand-paper: #fafbfd;
+  --color-brand-ink: #334155;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Easy-read mode: plain sans everywhere */
+html.easy-read {
+  --font-sans: var(--font-readable);
+  --font-display: var(--font-readable);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), "Segoe Print", cursive, system-ui, sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.55;
+  color: var(--color-brand-navy);
+  background-color: var(--color-brand-paper);
+  background-image:
+    radial-gradient(
+      ellipse 100% 60% at 50% -10%,
+      color-mix(in srgb, var(--color-brand-royal-muted) 85%, white),
+      transparent 50%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-brand-royal-muted) 30%, white) 0%,
+      var(--color-brand-paper) 40%
+    );
+}
+
+html.easy-read body {
+  font-size: 1rem;
+  line-height: 1.65;
+  letter-spacing: 0.01em;
+}
+
+.font-display {
+  font-family: var(--font-display), "Brush Script MT", cursive;
+}
+
+html.easy-read .font-display {
+  font-family: var(--font-readable), system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+html.easy-read input,
+html.easy-read textarea,
+html.easy-read select,
+html.easy-read button {
+  font-family: var(--font-readable), system-ui, sans-serif !important;
+  letter-spacing: 0.01em;
+}
+
+/* Logo-style accent stroke (pen line) */
+.brand-stroke {
+  display: block;
+  height: 3px;
+  width: 4.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    var(--color-brand-royal) 0%,
+    var(--color-brand-royal-bright) 100%
+  );
+}
+
+.brand-panel {
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--color-brand-navy) 10%, transparent);
+  background: white;
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--color-brand-navy) 4%, transparent),
+    0 12px 40px -12px color-mix(in srgb, var(--color-brand-navy) 12%, transparent);
+}
+
+.brand-panel-elevated {
+  border-radius: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--color-brand-royal) 18%, transparent);
+  background: white;
+  box-shadow:
+    0 2px 8px color-mix(in srgb, var(--color-brand-navy) 6%, transparent),
+    0 20px 50px -16px color-mix(in srgb, var(--color-brand-royal) 20%, transparent);
 }

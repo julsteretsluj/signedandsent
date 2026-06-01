@@ -1,36 +1,129 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Signed & Sent
 
-## Getting Started
+Digital parental consent signing for **SEAMUN I 2027**. Parents enter an access code, review the official consent form, sign (draw, type, or upload), and submit with their email.
 
-First, run the development server:
+## Quick start
 
 ```bash
+npm install
+npm run db:migrate   # if not already applied
+npm run db:seed      # creates demo codes
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) and use the shared code **`SEAMUN2027`** (or whatever you set in `SHARED_ACCESS_CODE`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How it works
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Organisers** distribute one shared access code (e.g. in a Google Form) — unlimited parents can submit with the same code.
+2. **Parents** visit the site, enter the code, read the form, add a signature, and submit with their email.
+3. **Submissions** are stored as signed PDFs in `uploads/submissions/` and linked in the database.
+4. **Email** (optional) — organisers and the parent each receive a confirmation with the signed PDF attached.
 
-## Learn More
+## Creating access codes
 
-To learn more about Next.js, take a look at the following resources:
+With the dev server running:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run create-code
+# optional custom code:
+npm run create-code -- SEAMUN2027
+# optional organiser-only label (never shown to parents):
+npm run create-code -- SEAMUN2027 --label "Batch A"
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Requires `ADMIN_SECRET` in `.env` (sent as `x-admin-secret` header).
 
-## Deploy on Vercel
+Or via API:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+curl -X POST http://localhost:3000/api/admin/codes \
+  -H "Content-Type: application/json" \
+  -H "x-admin-secret: your-secret" \
+  -d '{"code": "SEAMUN2027"}'
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+List all codes:
+
+```bash
+curl http://localhost:3000/api/admin/codes \
+  -H "x-admin-secret: your-secret"
+```
+
+## Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | SQLite path, e.g. `file:./prisma/dev.db` |
+| `ADMIN_SECRET` | Secret for admin API routes |
+| `NEXT_PUBLIC_APP_URL` | Base URL for `create-code` script (default `http://localhost:3000`) |
+| `SHARED_ACCESS_CODE` | Single code all parents use (default `SEAMUN2027`; run `npm run db:seed`) |
+| `SMTP_HOST` | SMTP server (if set, SMTP is used instead of Resend) |
+| `SMTP_PORT` | Usually `587` (STARTTLS) or `465` (SSL) |
+| `SMTP_USER` / `SMTP_PASS` | Mailbox login (often an app password) |
+| `RESEND_API_KEY` | [Resend](https://resend.com) API key (optional alternative) |
+| `EMAIL_FROM` | Sender address, e.g. `Signed & Sent <information@seamun.com>` |
+| `EMAIL_REPLY_TO` | Reply address for parent emails (default `information@seamun.com`) |
+| `NOTIFY_EMAIL` | Optional extra organiser inbox(es); comma-separated |
+
+## Email notifications
+
+Configure **SMTP** (recommended, no Resend) **or** **Resend**. If `SMTP_HOST` is set, the app uses your normal mail server; otherwise it uses Resend when `RESEND_API_KEY` is set.
+
+When email is configured and `EMAIL_FROM` is set, each submission emails the **parent** a copy of the signed PDF. Every submission also emails **information@seamun.com** with the full response and PDF attached.
+
+Parents always get a **Download your signed PDF** button on the success page (link valid 1 hour). If email is not configured, submissions still work.
+
+### Email without Resend (SMTP + Google Workspace)
+
+Use the same mailbox you read (`information@seamun.com`) to **send** mail via SMTP.
+
+**1. Google Workspace inbox**  
+Create `information@seamun.com` in Google Admin if needed.
+
+**2. App password** (required if 2-Step Verification is on)  
+Google Account → **Security** → **2-Step Verification** → **App passwords** → create one for “Mail” / “Signed and Sent”.
+
+**3. Add to `.env`**
+
+```env
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_SECURE="false"
+SMTP_USER="information@seamun.com"
+SMTP_PASS="xxxx xxxx xxxx xxxx"
+EMAIL_FROM="Signed & Sent <information@seamun.com>"
+EMAIL_REPLY_TO="information@seamun.com"
+NOTIFY_EMAIL="information@seamun.com"
+```
+
+Do **not** set `RESEND_API_KEY` unless you want Resend instead (SMTP takes priority when `SMTP_HOST` is set).
+
+**4. Microsoft 365** (alternative)
+
+```env
+SMTP_HOST="smtp.office365.com"
+SMTP_PORT="587"
+SMTP_SECURE="false"
+SMTP_USER="information@seamun.com"
+SMTP_PASS="your-password-or-app-password"
+```
+
+**5. Restart** the app and submit a test form.
+
+### Email with Resend (optional)
+
+If you prefer Resend: verify `seamun.com` in the Resend dashboard, set `RESEND_API_KEY`, and leave `SMTP_HOST` unset. See [resend.com](https://resend.com) for DNS setup.
+
+## Consent form PDF
+
+All access codes use the official SEAMUN form at `public/documents/parentconsent-seamun.pdf`. To replace it, overwrite that file (keep the same filename) and run `npm run db:seed` so existing codes point to it.
+
+On submit, the app fills in **signature** and **date** (page 2), plus a small e-sign audit line. Parents complete delegate details on the form itself.
+
+## Production notes
+
+- Change `ADMIN_SECRET` to a strong random value.
+- Consider PostgreSQL for production (`@prisma/adapter-pg`).
+- Verify your domain in Resend and set `EMAIL_FROM` to a real address.
+- Back up `uploads/submissions/` regularly.

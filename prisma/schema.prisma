@@ -1,0 +1,29 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model AccessCode {
+  id           String       @id @default(cuid())
+  code         String       @unique
+  label        String       @default("")
+  documentPath String
+  createdAt    DateTime     @default(now())
+  submissions  Submission[]
+}
+
+model Submission {
+  id            String     @id @default(cuid())
+  accessCodeId  String
+  accessCode    AccessCode @relation(fields: [accessCodeId], references: [id])
+  parentEmail   String
+  signatureType String
+  signedPdfPath String
+  submittedAt   DateTime   @default(now())
+
+  @@index([accessCodeId])
+}
