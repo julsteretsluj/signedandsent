@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { SignForm } from "@/components/SignForm";
-import { prisma } from "@/lib/prisma";
+import { findAccessCode } from "@/lib/access-codes";
 
 type PageProps = {
   params: Promise<{ code: string }>;
@@ -10,9 +10,7 @@ export default async function SignPage({ params }: PageProps) {
   const { code: rawCode } = await params;
   const code = rawCode.trim().toUpperCase();
 
-  const accessCode = await prisma.accessCode.findUnique({
-    where: { code },
-  });
+  const accessCode = await findAccessCode(code);
 
   if (!accessCode) {
     notFound();

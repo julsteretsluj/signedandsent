@@ -6,10 +6,33 @@ Digital parental consent signing for **SEAMUN I 2027**. Parents enter an access 
 
 ```bash
 npm install
-npm run db:migrate   # if not already applied
-npm run db:seed      # creates demo codes
+npm run db:migrate   # if not already applied (development)
+npm run db:seed      # creates the shared access code
 npm run dev
 ```
+
+For production (`npm start`), migrations and seed run automatically via `prestart` (`npm run db:deploy`). Locally the SQLite file lives at `prisma/dev.db` (gitignored).
+
+### Deploying on Vercel
+
+Vercel’s serverless runtime cannot use a local SQLite file. Use [Turso](https://turso.tech) (SQLite-compatible):
+
+1. Create a Turso database and copy its URL + auth token.
+2. In Vercel → **Settings → Environment Variables**, set:
+   - `TURSO_DATABASE_URL` — e.g. `libsql://your-db.turso.io`
+   - `TURSO_AUTH_TOKEN` — from `turso db tokens create`
+   - `SHARED_ACCESS_CODE` — `SEAMUN2027` (optional; used as fallback if the DB is empty)
+3. Apply migrations to Turso (once per schema change):
+
+```bash
+turso db shell your-db-name < prisma/migrations/20260526033355_init/migration.sql
+# …repeat for each migration in prisma/migrations/, newest last
+npm run db:seed   # with TURSO_* env vars set locally
+```
+
+Signed PDFs are stored in the database on Vercel (not on disk). Submissions still email organisers and parents when SMTP/Resend is configured.
+
+Without Turso, the shared access code from `SHARED_ACCESS_CODE` still loads the sign form, but submissions are not persisted.
 
 Open [http://localhost:3000](http://localhost:3000) and use the shared code **`SEAMUN2027`** (or whatever you set in `SHARED_ACCESS_CODE`).
 
@@ -54,7 +77,9 @@ curl http://localhost:3000/api/admin/codes \
 
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | SQLite path, e.g. `file:./prisma/dev.db` |
+| `DATABASE_URL` | Local SQLite path, e.g. `file:./prisma/dev.db` (development only) |
+| `TURSO_DATABASE_URL` | Turso/libSQL URL for Vercel production |
+| `TURSO_AUTH_TOKEN` | Turso auth token (required with `TURSO_DATABASE_URL`) |
 | `ADMIN_SECRET` | Secret for admin API routes |
 | `NEXT_PUBLIC_APP_URL` | Base URL for `create-code` script (default `http://localhost:3000`) |
 | `SHARED_ACCESS_CODE` | Single code all parents use (default `SEAMUN2027`; run `npm run db:seed`) |

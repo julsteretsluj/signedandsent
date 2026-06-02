@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { BrandLogo } from "./BrandLogo";
-import { EasyReadToggle } from "./EasyReadToggle";
 
 export function Header() {
   return (
@@ -16,7 +15,6 @@ export function Header() {
             Parental consent
           </p>
         </Link>
-        <EasyReadToggle />
       </div>
     </header>
   );

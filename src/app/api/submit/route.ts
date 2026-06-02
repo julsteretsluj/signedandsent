@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import fs from "fs/promises";
 import path from "path";
+import { findAccessCode } from "@/lib/access-codes";
 import { createDownloadToken } from "@/lib/download-token";
 import { sendSubmissionEmails } from "@/lib/email";
-import { prisma } from "@/lib/prisma";
+import { getPrisma, isDatabaseConfigured } from "@/lib/db-client";
 import { fillAndSignConsentPdf } from "@/lib/pdf";
 import { dataUrlToPngBuffer } from "@/lib/signature";
+import { persistSignedPdf } from "@/lib/submission-storage";
 import { submitSchema } from "@/lib/validation";
+
+const ENV_FALLBACK_ACCESS_CODE_ID = "env-fallback";
 
 export async function POST(request: Request) {
   try {
@@ -26,9 +29,7 @@ export async function POST(request: Request) {
       mediaConsent,
     } = submitSchema.parse(body);
 
-    const accessCode = await prisma.accessCode.findUnique({
-      where: { code },
-    });
+    const accessCode = await findAccessCode(code);
 
     if (!accessCode) {
       return NextResponse.json({ error: "Invalid code." }, { status: 404 });
@@ -51,25 +52,30 @@ export async function POST(request: Request) {
       email
     );
 
-    const submissionsDir = path.join(process.cwd(), "uploads", "submissions");
-    await fs.mkdir(submissionsDir, { recursive: true });
+    const { signedPdfPath, signedPdfData } = await persistSignedPdf(
+      code,
+      email,
+      signedPdf
+    );
 
-    const emailSlug = email
-      .split("@")[0]
-      .replace(/[^a-zA-Z0-9]+/g, "-")
-      .slice(0, 40);
-    const filename = `${code}-${emailSlug}-${Date.now()}.pdf`;
-    const signedPdfPath = path.join("uploads", "submissions", filename);
-    await fs.writeFile(path.join(process.cwd(), signedPdfPath), signedPdf);
+    let submissionId: string | undefined;
+    if (
+      isDatabaseConfigured() &&
+      accessCode.id !== ENV_FALLBACK_ACCESS_CODE_ID
+    ) {
+      const submission = await getPrisma().submission.create({
+        data: {
+          accessCodeId: accessCode.id,
+          parentEmail: email,
+          signatureType: signatureMethod,
+          signedPdfPath,
+          signedPdfData: signedPdfData ? new Uint8Array(signedPdfData) : undefined,
+        },
+      });
+      submissionId = submission.id;
+    }
 
-    const submission = await prisma.submission.create({
-      data: {
-        accessCodeId: accessCode.id,
-        parentEmail: email,
-        signatureType: signatureMethod,
-        signedPdfPath,
-      },
-    });
+    const filename = path.basename(signedPdfPath);
 
     let parentCopySent = false;
     let organiserNotified = false;
@@ -99,8 +105,10 @@ export async function POST(request: Request) {
 
     let downloadUrl: string | undefined;
     try {
-      const token = createDownloadToken(submission.id);
-      downloadUrl = `/api/submissions/${submission.id}/download?token=${token}`;
+      if (submissionId) {
+        const token = createDownloadToken(submissionId);
+        downloadUrl = `/api/submissions/${submissionId}/download?token=${token}`;
+      }
     } catch {
       // ADMIN_SECRET not set — skip download link
     }

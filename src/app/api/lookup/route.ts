@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { prisma } from "@/lib/prisma";
+import { findAccessCode } from "@/lib/access-codes";
 import { lookupSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -8,9 +8,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { code } = lookupSchema.parse(body);
 
-    const accessCode = await prisma.accessCode.findUnique({
-      where: { code },
-    });
+    const accessCode = await findAccessCode(code);
 
     if (!accessCode) {
       return NextResponse.json(

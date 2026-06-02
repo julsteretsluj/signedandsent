@@ -23,6 +23,7 @@ model Submission {
   parentEmail   String
   signatureType String
   signedPdfPath String
+  signedPdfData Bytes?
   submittedAt   DateTime   @default(now())
 
   @@index([accessCodeId])

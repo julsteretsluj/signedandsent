@@ -1,9 +1,8 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-caveat);
-  --font-display: var(--font-dancing);
-  --font-readable: var(--font-geist-sans);
+  --font-sans: var(--font-geist-sans);
+  --font-display: var(--font-geist-sans);
   --color-brand-navy: #0a1f38;
   --color-brand-navy-dark: #061428;
   --color-brand-royal: #1e5aa0;
@@ -14,16 +13,11 @@
   --color-brand-ink: #334155;
 }
 
-/* Easy-read mode: plain sans everywhere */
-html.easy-read {
-  --font-sans: var(--font-readable);
-  --font-display: var(--font-readable);
-}
-
 body {
-  font-family: var(--font-sans), "Segoe Print", cursive, system-ui, sans-serif;
-  font-size: 1.125rem;
-  line-height: 1.55;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.65;
+  letter-spacing: 0.01em;
   color: var(--color-brand-navy);
   background-color: var(--color-brand-paper);
   background-image:
@@ -39,26 +33,8 @@ body {
     );
 }
 
-html.easy-read body {
-  font-size: 1rem;
-  line-height: 1.65;
-  letter-spacing: 0.01em;
-}
-
 .font-display {
-  font-family: var(--font-display), "Brush Script MT", cursive;
-}
-
-html.easy-read .font-display {
-  font-family: var(--font-readable), system-ui, sans-serif;
-  letter-spacing: 0.01em;
-}
-
-html.easy-read input,
-html.easy-read textarea,
-html.easy-read select,
-html.easy-read button {
-  font-family: var(--font-readable), system-ui, sans-serif !important;
+  font-family: var(--font-display), system-ui, sans-serif;
   letter-spacing: 0.01em;
 }
 

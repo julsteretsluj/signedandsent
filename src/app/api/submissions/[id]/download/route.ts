@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import fs from "fs/promises";
 import path from "path";
 import { verifyDownloadToken } from "@/lib/download-token";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/db-client";
+import { readSignedPdf } from "@/lib/submission-storage";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -14,7 +14,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Invalid or expired link." }, { status: 403 });
   }
 
-  const submission = await prisma.submission.findUnique({
+  const submission = await getPrisma().submission.findUnique({
     where: { id },
   });
 
@@ -22,17 +22,16 @@ export async function GET(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
 
-  const absolutePath = path.join(process.cwd(), submission.signedPdfPath);
-  try {
-    const pdf = await fs.readFile(absolutePath);
-    const filename = path.basename(submission.signedPdfPath);
-    return new NextResponse(pdf, {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${filename}"`,
-      },
-    });
-  } catch {
+  const pdf = await readSignedPdf(submission);
+  if (!pdf) {
     return NextResponse.json({ error: "File not found." }, { status: 404 });
   }
+
+  const filename = path.basename(submission.signedPdfPath);
+  return new NextResponse(new Uint8Array(pdf), {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    },
+  });
 }
