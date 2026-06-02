@@ -162,7 +162,7 @@ export function SignForm({ code, documentUrl }: SignFormProps) {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="parent@example.com"
+            placeholder="e.g. guardian@example.com"
             required
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-brand-navy focus:border-brand-royal focus:outline-none focus:ring-2 focus:ring-brand-royal/25"
           />

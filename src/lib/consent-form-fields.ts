@@ -37,14 +37,14 @@ export const CONSENT_FORM_FIELDS: ConsentFieldConfig[] = [
   {
     key: "delegateName",
     label: "Delegate full name",
-    placeholder: "e.g. Somchai Prasert",
+    placeholder: "e.g. Jordan Kai Rivers",
     guide:
       "Your child's full legal name (as on passport or school records).",
   },
   {
     key: "preferredName",
     label: "Preferred name (optional)",
-    placeholder: "e.g. Alex",
+    placeholder: "e.g. J.K.",
     optional: true,
     guide:
       "Name your child prefers to be called at the conference, if different from their legal name.",
@@ -52,19 +52,19 @@ export const CONSENT_FORM_FIELDS: ConsentFieldConfig[] = [
   {
     key: "school",
     label: "School / institution",
-    placeholder: "e.g. Wycombe Abbey International School Bangkok",
+    placeholder: "e.g. Northbridge Model United Nations Academy",
     guide: "The school or organisation your child represents.",
   },
   {
     key: "parentName",
     label: "Parent / guardian name",
-    placeholder: "e.g. Ms. Siriporn Prasert",
+    placeholder: "e.g. Ms. Taylor Morgan",
     guide: "Full name of the parent or legal guardian signing this form.",
   },
   {
     key: "emergencyContact",
     label: "Emergency contact number",
-    placeholder: "e.g. +66 81 234 5678",
+    placeholder: "e.g. +1 555 010 2847",
     guide:
       "Phone number reachable during the conference (16–17 Jan 2027). Include country code.",
     inputMode: "tel",

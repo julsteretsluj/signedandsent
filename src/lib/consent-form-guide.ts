@@ -33,7 +33,7 @@ export const CONSENT_FORM_GUIDE: GuideStep[] = [
         required: true,
         guide:
           "Typed in the Section 1 form above — your child's full legal name.",
-        example: "e.g. Somchai Prasert or Emma Louise Williams",
+        example: "e.g. Jordan Kai Rivers or Riley Quinn Harper",
       },
       {
         id: "preferred-name",
@@ -42,7 +42,7 @@ export const CONSENT_FORM_GUIDE: GuideStep[] = [
         required: false,
         guide:
           "If your child uses a different name at the conference, enter it here. Leave blank if not applicable.",
-        example: "e.g. Alex",
+        example: "e.g. J.K.",
       },
       {
         id: "school",
@@ -51,7 +51,7 @@ export const CONSENT_FORM_GUIDE: GuideStep[] = [
         required: true,
         guide:
           "The school or organisation the delegate represents at the conference.",
-        example: "e.g. Wycombe Abbey International School Bangkok",
+        example: "e.g. Northbridge Model United Nations Academy",
       },
       {
         id: "parent-name",
@@ -60,7 +60,7 @@ export const CONSENT_FORM_GUIDE: GuideStep[] = [
         required: true,
         guide:
           "Full name of the parent or legal guardian signing this form (the undersigned in Section 2).",
-        example: "e.g. Ms. Siriporn Prasert or Mr. James Williams",
+        example: "e.g. Ms. Taylor Morgan or Mr. Casey Quinn Harper",
       },
       {
         id: "emergency-contact",
@@ -69,7 +69,7 @@ export const CONSENT_FORM_GUIDE: GuideStep[] = [
         required: true,
         guide:
           "A phone number where we can reach you during the conference (16–17 January 2027). Include country code if outside Thailand.",
-        example: "e.g. +66 81 234 5678 or +44 7700 900123",
+        example: "e.g. +1 555 010 2847 or +44 5550 100 284",
       },
     ],
   },
@@ -212,7 +212,7 @@ export const CONSENT_FORM_GUIDE: GuideStep[] = [
         required: true,
         guide:
           "Enter the email address where you want confirmation sent. Use an inbox you check regularly.",
-        example: "e.g. parent.name@gmail.com",
+        example: "e.g. guardian@example.com",
       },
       {
         id: "confirmation",
@@ -228,9 +228,9 @@ export const CONSENT_FORM_GUIDE: GuideStep[] = [
 
 export const GUIDE_SUMMARY = {
   conferenceDates: "16–17 January 2027",
-  venue: "Wycombe Abbey International School Bangkok (WASBKK)",
+  venue: "Riverside International Academy, Bangkok (Example Campus)",
   contacts: [
-    { role: "Secretary General", email: "juleskittoastrop@gmail.com" },
+    { role: "Secretary General", email: "secretary-general@example-seamun.org" },
     { role: "SMT", email: "information@seamun.com" },
   ],
 };
