@@ -7,6 +7,8 @@ import { CENTRAL_INBOX_EMAIL } from "./email";
 export const DEFAULT_GOOGLE_DRIVE_FOLDER_ID =
   "1kO3j1QfOJvaEkf-1rb-8Pz_Ro642Og41";
 
+const DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+
 type ServiceAccountCredentials = {
   client_email: string;
   private_key: string;
@@ -37,13 +39,21 @@ function getServiceAccountCredentials(): ServiceAccountCredentials | null {
   }
 }
 
-/** Organiser inbox that owns the backup folder — never exposed to parents. */
-function getDriveOwnerEmail(): string {
-  return process.env.GOOGLE_DRIVE_OWNER_EMAIL?.trim() || CENTRAL_INBOX_EMAIL;
+function hasOAuthConfig(): boolean {
+  return Boolean(
+    process.env.GOOGLE_OAUTH_CLIENT_ID?.trim() &&
+      process.env.GOOGLE_OAUTH_CLIENT_SECRET?.trim() &&
+      process.env.GOOGLE_OAUTH_REFRESH_TOKEN?.trim()
+  );
+}
+
+/** Workspace inbox that should also see backups (never exposed to parents). */
+function getOrganiserInboxEmail(): string {
+  return process.env.GOOGLE_DRIVE_ORGANISER_EMAIL?.trim() || CENTRAL_INBOX_EMAIL;
 }
 
 export function isGoogleDriveConfigured(): boolean {
-  return !!getServiceAccountCredentials();
+  return hasOAuthConfig() || !!getServiceAccountCredentials();
 }
 
 function getDriveFolderId(): string {
@@ -53,7 +63,18 @@ function getDriveFolderId(): string {
   );
 }
 
-function getDriveClient() {
+function getDriveClient(): drive_v3.Drive | null {
+  if (hasOAuthConfig()) {
+    const oauth2 = new google.auth.OAuth2(
+      process.env.GOOGLE_OAUTH_CLIENT_ID,
+      process.env.GOOGLE_OAUTH_CLIENT_SECRET
+    );
+    oauth2.setCredentials({
+      refresh_token: process.env.GOOGLE_OAUTH_REFRESH_TOKEN,
+    });
+    return google.drive({ version: "v3", auth: oauth2 });
+  }
+
   const credentials = getServiceAccountCredentials();
   if (!credentials) {
     return null;
@@ -61,18 +82,18 @@ function getDriveClient() {
 
   const auth = new google.auth.GoogleAuth({
     credentials,
-    scopes: ["https://www.googleapis.com/auth/drive.file"],
+    scopes: [DRIVE_FILE_SCOPE],
   });
 
   return google.drive({ version: "v3", auth });
 }
 
-/** Strip public/link sharing and transfer ownership to the organiser inbox. */
+/** Keep files private; grant organiser inbox access without public links. */
 async function restrictToOrganiserInbox(
   drive: drive_v3.Drive,
   fileId: string
 ): Promise<void> {
-  const ownerEmail = getDriveOwnerEmail();
+  const organiserEmail = getOrganiserInboxEmail();
 
   const { data } = await drive.permissions.list({
     fileId,
@@ -90,21 +111,29 @@ async function restrictToOrganiserInbox(
     }
   }
 
-  await drive.permissions.create({
-    fileId,
-    requestBody: {
-      type: "user",
-      role: "owner",
-      emailAddress: ownerEmail,
-    },
-    transferOwnership: true,
-    supportsAllDrives: true,
-  });
+  const alreadyShared = (data.permissions ?? []).some(
+    (p) =>
+      p.emailAddress?.toLowerCase() === organiserEmail.toLowerCase() &&
+      (p.role === "writer" || p.role === "owner")
+  );
+
+  if (!alreadyShared) {
+    await drive.permissions.create({
+      fileId,
+      requestBody: {
+        type: "user",
+        role: "writer",
+        emailAddress: organiserEmail,
+      },
+      sendNotificationEmail: false,
+      supportsAllDrives: true,
+    });
+  }
 }
 
 /**
  * Upload a signed PDF to the organiser-only Drive folder.
- * Server-side backup for information@seamun.com — never linked or shown to parents.
+ * Server-side backup — never linked or shown to parents.
  */
 export async function uploadPdfToGoogleDrive(
   filename: string,
@@ -171,3 +200,5 @@ export async function copyPdfToGoogleDrive(
     return false;
   }
 }
+
+export { DRIVE_FILE_SCOPE };

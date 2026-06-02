@@ -90,28 +90,43 @@ curl http://localhost:3000/api/admin/codes \
 | `EMAIL_FROM` | Sender address, e.g. `Signed & Sent <information@seamun.com>` |
 | `EMAIL_REPLY_TO` | Reply address for parent emails (default `information@seamun.com`) |
 | `NOTIFY_EMAIL` | Optional extra organiser inbox(es); comma-separated |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | Google service account JSON (organiser-only Drive backup) |
-| `GOOGLE_DRIVE_FOLDER_ID` | Drive folder owned by `information@seamun.com` (not shared publicly) |
-| `GOOGLE_DRIVE_OWNER_EMAIL` | Organiser inbox that owns uploaded files (default `information@seamun.com`) |
+| `GOOGLE_OAUTH_CLIENT_ID` | OAuth client ID (**required** for Drive backup) |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | OAuth client secret |
+| `GOOGLE_OAUTH_REFRESH_TOKEN` | Refresh token for the account that owns the Drive folder |
+| `GOOGLE_DRIVE_FOLDER_ID` | Folder ID from the Drive URL (`…/folders/FOLDER_ID`) |
+| `GOOGLE_DRIVE_ORGANISER_EMAIL` | Also grant access to this inbox (default `information@seamun.com`) |
 
 ## Google Drive backup (organisers only)
 
-Each signed PDF is copied to a **private** Google Drive folder on submit. This is a server-side backup for **`information@seamun.com`** — parents never see a Drive link, and the folder must not be shared with parents or “Anyone with the link”.
+Each signed PDF is copied to a **private** Google Drive folder on submit. Parents never see a Drive link.
 
-### Setup (one time)
+**You do not need a service account or service account key.** Google often blocks key creation, and service accounts cannot access personal Gmail folders anyway. Use OAuth below.
 
-1. Sign in to Google Drive as **`information@seamun.com`** and create a folder for signed consents (or use your existing folder).
-2. Confirm the folder is **Restricted** — only `information@seamun.com` and the service account below should have access.
-3. Open [Google Cloud Console](https://console.cloud.google.com/) → create or select a project.
-4. Enable **Google Drive API** (APIs & Services → Library).
-5. Create a **service account** (IAM & Admin → Service Accounts → Create) and download its JSON key.
-6. In Drive, **Share the folder** with the service account email (e.g. `…@….iam.gserviceaccount.com`) as **Editor** — do not add parents or a public link.
-7. Add to `.env` / Vercel:
-   - `GOOGLE_SERVICE_ACCOUNT_JSON` — full JSON key (minified on one line is fine)
-   - `GOOGLE_DRIVE_FOLDER_ID` — folder ID from the URL (`…/folders/FOLDER_ID`)
-   - `GOOGLE_DRIVE_OWNER_EMAIL` — optional; defaults to `information@seamun.com`
+### Setup with OAuth (personal Gmail folder)
 
-Uploaded files are owned by `information@seamun.com`, link sharing is removed, and upload failures do not block parent submission. To backfill PDFs already in the database:
+The folder can live in **`juleskittoastrop@gmail.com`** (or any Google account that owns the folder). The app uploads as that account — no sharing with robots or service accounts.
+
+1. Open [Google Cloud Console](https://console.cloud.google.com/) → select or create a project.
+2. **APIs & Services → Library** → enable **Google Drive API**.
+3. **APIs & Services → OAuth consent screen** → configure (External is fine for personal use) → add your Gmail as a test user if the app is in “Testing”.
+4. **APIs & Services → Credentials** → **Create credentials** → **OAuth client ID**:
+   - Application type: **Desktop app** (simplest), **or**
+   - Web application with redirect URI: `http://localhost:3000/oauth2callback`
+5. Add to `.env`:
+   ```env
+   GOOGLE_OAUTH_CLIENT_ID=…apps.googleusercontent.com
+   GOOGLE_OAUTH_CLIENT_SECRET=…
+   GOOGLE_DRIVE_FOLDER_ID=1kO3j1QfOJvaEkf-1rb-8Pz_Ro642Og41
+   ```
+6. Run once and sign in as the **folder owner** (`juleskittoastrop@gmail.com`):
+   ```bash
+   npm run google-drive-auth
+   ```
+   After approving access, paste the redirect URL from your browser into the script. Copy the printed `GOOGLE_OAUTH_REFRESH_TOKEN` into `.env` and Vercel.
+
+Each uploaded file stays private; `information@seamun.com` gets writer access automatically. You can also share the Drive folder manually with `information@seamun.com` so both accounts see all files in the folder view.
+
+Upload failures do not block parent submission. To backfill existing PDFs:
 
 ```bash
 npx tsx scripts/backfill-google-drive.ts

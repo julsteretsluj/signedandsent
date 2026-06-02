@@ -14,7 +14,7 @@ import { readSignedPdf } from "../src/lib/submission-storage";
 async function main() {
   if (!isGoogleDriveConfigured()) {
     console.error(
-      "Set GOOGLE_SERVICE_ACCOUNT_JSON in .env before running backfill."
+      "Set GOOGLE_OAUTH_* vars (recommended) or GOOGLE_SERVICE_ACCOUNT_JSON in .env."
     );
     process.exit(1);
   }

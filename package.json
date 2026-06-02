@@ -12,7 +12,8 @@
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
     "db:migrate": "prisma migrate dev",
-    "create-code": "tsx scripts/create-code.ts"
+    "create-code": "tsx scripts/create-code.ts",
+    "google-drive-auth": "tsx scripts/google-drive-auth.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.3",
