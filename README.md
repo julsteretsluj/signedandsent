@@ -90,6 +90,32 @@ curl http://localhost:3000/api/admin/codes \
 | `EMAIL_FROM` | Sender address, e.g. `Signed & Sent <information@seamun.com>` |
 | `EMAIL_REPLY_TO` | Reply address for parent emails (default `information@seamun.com`) |
 | `NOTIFY_EMAIL` | Optional extra organiser inbox(es); comma-separated |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Google service account JSON (organiser-only Drive backup) |
+| `GOOGLE_DRIVE_FOLDER_ID` | Drive folder owned by `information@seamun.com` (not shared publicly) |
+| `GOOGLE_DRIVE_OWNER_EMAIL` | Organiser inbox that owns uploaded files (default `information@seamun.com`) |
+
+## Google Drive backup (organisers only)
+
+Each signed PDF is copied to a **private** Google Drive folder on submit. This is a server-side backup for **`information@seamun.com`** — parents never see a Drive link, and the folder must not be shared with parents or “Anyone with the link”.
+
+### Setup (one time)
+
+1. Sign in to Google Drive as **`information@seamun.com`** and create a folder for signed consents (or use your existing folder).
+2. Confirm the folder is **Restricted** — only `information@seamun.com` and the service account below should have access.
+3. Open [Google Cloud Console](https://console.cloud.google.com/) → create or select a project.
+4. Enable **Google Drive API** (APIs & Services → Library).
+5. Create a **service account** (IAM & Admin → Service Accounts → Create) and download its JSON key.
+6. In Drive, **Share the folder** with the service account email (e.g. `…@….iam.gserviceaccount.com`) as **Editor** — do not add parents or a public link.
+7. Add to `.env` / Vercel:
+   - `GOOGLE_SERVICE_ACCOUNT_JSON` — full JSON key (minified on one line is fine)
+   - `GOOGLE_DRIVE_FOLDER_ID` — folder ID from the URL (`…/folders/FOLDER_ID`)
+   - `GOOGLE_DRIVE_OWNER_EMAIL` — optional; defaults to `information@seamun.com`
+
+Uploaded files are owned by `information@seamun.com`, link sharing is removed, and upload failures do not block parent submission. To backfill PDFs already in the database:
+
+```bash
+npx tsx scripts/backfill-google-drive.ts
+```
 
 ## Email notifications
 

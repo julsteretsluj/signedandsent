@@ -1,13 +1,20 @@
 import { z } from "zod";
 
+const namePart = (label: string, max = 60) =>
+  z.string().trim().min(1, `${label} is required`).max(max);
+
+const optionalNamePart = z
+  .string()
+  .max(60)
+  .optional()
+  .transform((v) => v?.trim() || undefined);
+
 /** Section 1 fields — typed on the website and drawn onto page 1 of the PDF. */
 export const consentFormFieldsSchema = z.object({
-  delegateName: z.string().min(1, "Delegate full name is required").max(120),
-  preferredName: z
-    .string()
-    .max(80)
-    .optional()
-    .transform((v) => v?.trim() || undefined),
+  delegateFirstName: namePart("First name"),
+  delegateMiddleName: optionalNamePart,
+  delegateLastName: namePart("Last name"),
+  preferredName: optionalNamePart,
   school: z.string().min(1, "School / institution is required").max(120),
   parentName: z.string().min(1, "Parent / guardian name is required").max(120),
   emergencyContact: z
@@ -17,15 +24,59 @@ export const consentFormFieldsSchema = z.object({
 });
 
 export type ConsentFormFields = {
-  delegateName: string;
+  delegateFirstName: string;
+  delegateMiddleName?: string;
+  delegateLastName: string;
   preferredName?: string;
   school: string;
   parentName: string;
   emergencyContact: string;
 };
 
+export type DelegateNameFieldConfig = {
+  key:
+    | "delegateFirstName"
+    | "delegateMiddleName"
+    | "delegateLastName"
+    | "preferredName";
+  label: string;
+  placeholder: string;
+  guide: string;
+  optional?: boolean;
+};
+
+export const DELEGATE_NAME_FIELDS: DelegateNameFieldConfig[] = [
+  {
+    key: "delegateFirstName",
+    label: "First name",
+    placeholder: "e.g. Jordan",
+    guide: "Your child's legal first name (as on passport or school records).",
+  },
+  {
+    key: "delegateMiddleName",
+    label: "Middle name (optional)",
+    placeholder: "e.g. Kai",
+    optional: true,
+    guide: "Middle name or initial, if applicable.",
+  },
+  {
+    key: "delegateLastName",
+    label: "Last name",
+    placeholder: "e.g. Rivers",
+    guide: "Your child's legal surname or family name.",
+  },
+  {
+    key: "preferredName",
+    label: "Preferred name (optional)",
+    placeholder: "e.g. J.K.",
+    optional: true,
+    guide:
+      "If provided, appears in brackets after the first and middle names on the PDF (e.g. Jordan Kai (J.K.) Rivers).",
+  },
+];
+
 export type ConsentFieldConfig = {
-  key: keyof ConsentFormFields;
+  key: "school" | "parentName" | "emergencyContact";
   label: string;
   placeholder: string;
   guide: string;
@@ -34,21 +85,6 @@ export type ConsentFieldConfig = {
 };
 
 export const CONSENT_FORM_FIELDS: ConsentFieldConfig[] = [
-  {
-    key: "delegateName",
-    label: "Delegate full name",
-    placeholder: "e.g. Jordan Kai Rivers",
-    guide:
-      "Your child's full legal name (as on passport or school records).",
-  },
-  {
-    key: "preferredName",
-    label: "Preferred name (optional)",
-    placeholder: "e.g. J.K.",
-    optional: true,
-    guide:
-      "Name your child prefers to be called at the conference, if different from their legal name.",
-  },
   {
     key: "school",
     label: "School / institution",
@@ -71,27 +107,46 @@ export const CONSENT_FORM_FIELDS: ConsentFieldConfig[] = [
   },
 ];
 
+/** First [Middle] (Preferred) Last — used on the PDF and in emails. */
+export function formatDelegateDisplayName(fields: {
+  delegateFirstName: string;
+  delegateMiddleName?: string;
+  delegateLastName: string;
+  preferredName?: string;
+}): string {
+  const first = fields.delegateFirstName.trim();
+  const middle = fields.delegateMiddleName?.trim() ?? "";
+  const last = fields.delegateLastName.trim();
+  const preferred = fields.preferredName?.trim() ?? "";
+
+  let leading = first;
+  if (middle) {
+    leading = `${leading} ${middle}`;
+  }
+  if (preferred) {
+    leading = `${leading} (${preferred})`;
+  }
+  return `${leading} ${last}`.replace(/\s+/g, " ").trim();
+}
+
 /** PDF coordinates (origin bottom-left), aligned to underscore lines on page 1. */
 export const PDF_TEXT_FIELDS: {
-  key: "delegateName" | "school" | "parentName" | "emergencyContact";
+  key: "school" | "parentName" | "emergencyContact";
   page: number;
   x: number;
   y: number;
   size: number;
   maxChars: number;
 }[] = [
-  { key: "delegateName", page: 0, x: 228, y: 662, size: 10, maxChars: 48 },
   { key: "school", page: 0, x: 220, y: 634, size: 10, maxChars: 52 },
   { key: "parentName", page: 0, x: 248, y: 607, size: 10, maxChars: 44 },
   { key: "emergencyContact", page: 0, x: 280, y: 579, size: 10, maxChars: 28 },
 ];
 
-/** Shown below delegate name on page 1 when provided. */
-export const PDF_PREFERRED_NAME = {
+export const PDF_DELEGATE_NAME = {
   page: 0,
   x: 228,
-  y: 648,
-  size: 9,
-  maxChars: 40,
-  prefix: "Preferred name: ",
+  y: 662,
+  size: 10,
+  maxChars: 48,
 };

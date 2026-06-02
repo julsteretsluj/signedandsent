@@ -27,13 +27,28 @@ export const CONSENT_FORM_GUIDE: GuideStep[] = [
       "Use the text boxes in Section 1 below (they are added to page 1 of the PDF automatically). Match passport or school records spelling.",
     fields: [
       {
-        id: "delegate-name",
-        label: "Delegate full name",
+        id: "delegate-first-name",
+        label: "First name",
         type: "text",
         required: true,
-        guide:
-          "Typed in the Section 1 form above — your child's full legal name.",
-        example: "e.g. Jordan Kai Rivers or Riley Quinn Harper",
+        guide: "Your child's legal first name, as on passport or school records.",
+        example: "e.g. Jordan",
+      },
+      {
+        id: "delegate-middle-name",
+        label: "Middle name (optional)",
+        type: "text",
+        required: false,
+        guide: "Middle name or initial, if applicable.",
+        example: "e.g. Kai",
+      },
+      {
+        id: "delegate-last-name",
+        label: "Last name",
+        type: "text",
+        required: true,
+        guide: "Your child's legal surname or family name.",
+        example: "e.g. Rivers",
       },
       {
         id: "preferred-name",
@@ -41,8 +56,8 @@ export const CONSENT_FORM_GUIDE: GuideStep[] = [
         type: "text",
         required: false,
         guide:
-          "If your child uses a different name at the conference, enter it here. Leave blank if not applicable.",
-        example: "e.g. J.K.",
+          "If provided, appears in brackets after the first and middle names on the PDF.",
+        example: "e.g. Jordan Kai (J.K.) Rivers",
       },
       {
         id: "school",

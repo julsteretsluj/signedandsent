@@ -1,4 +1,5 @@
 import { CONSENT_CHECKBOX_CONFIG } from "./consent-checkboxes";
+import { formatDelegateDisplayName } from "./consent-form-fields";
 import { isEmailConfigured, sendMail } from "./email-send";
 
 /** Central inbox for all signed consent PDFs (always notified on submit). */
@@ -31,7 +32,9 @@ export type SubmissionEmailParams = {
   signatureMethod: string;
   signedPdf: Buffer;
   filename: string;
-  delegateName: string;
+  delegateFirstName: string;
+  delegateMiddleName?: string;
+  delegateLastName: string;
   preferredName?: string;
   school: string;
   parentName: string;
@@ -77,6 +80,7 @@ export async function sendSubmissionEmails(
 
   const organiserHtml = buildOrganiserEmailHtml(params, submittedAt);
   const parentHtml = buildParentEmailHtml(params, submittedAt);
+  const delegateDisplayName = formatDelegateDisplayName(params);
 
   const sends: Promise<void>[] = [];
 
@@ -85,7 +89,7 @@ export async function sendSubmissionEmails(
       sendMail({
         to: params.parentEmail,
         replyTo,
-        subject: `Your signed SEAMUN consent for ${params.delegateName}`,
+        subject: `Your signed SEAMUN consent for ${delegateDisplayName}`,
         html: parentHtml,
         attachments: [attachment],
       })
@@ -106,7 +110,7 @@ export async function sendSubmissionEmails(
       sendMail({
         to: notifyTo,
         replyTo,
-        subject: `SEAMUN consent: ${params.delegateName} (code ${params.code})`,
+        subject: `SEAMUN consent: ${delegateDisplayName} (code ${params.code})`,
         html: organiserHtml,
         attachments: [attachment],
       })
@@ -133,8 +137,13 @@ function buildOrganiserEmailHtml(
   const signatureLabel =
     SIGNATURE_METHOD_LABELS[params.signatureMethod] ?? params.signatureMethod;
 
+  const delegateDisplayName = formatDelegateDisplayName(params);
+
   const section1Rows = [
-    row("Delegate full name", params.delegateName),
+    row("Delegate name (on PDF)", delegateDisplayName),
+    row("First name", params.delegateFirstName),
+    row("Middle name", params.delegateMiddleName || "—"),
+    row("Last name", params.delegateLastName),
     row("Preferred name", params.preferredName || "—"),
     row("School / institution", params.school),
     row("Parent / guardian", params.parentName),
@@ -188,6 +197,8 @@ function buildParentEmailHtml(
   params: SubmissionEmailParams,
   submittedAt: string
 ): string {
+  const delegateDisplayName = formatDelegateDisplayName(params);
+
   return emailShell(`
     <h2 style="margin:0 0 8px;color:#0c2340;font-size:20px">Your signed SEAMUN I 2027 consent form</h2>
     <p style="margin:0 0 12px;color:#334155;font-size:15px;line-height:1.5">
@@ -195,7 +206,7 @@ function buildParentEmailHtml(
     </p>
     <p style="margin:0 0 12px;color:#334155;font-size:15px;line-height:1.5">
       Thank you for submitting the parental consent and data privacy form for
-      <strong>${escapeHtml(params.delegateName)}</strong>
+      <strong>${escapeHtml(delegateDisplayName)}</strong>
       (${escapeHtml(params.school)}).
     </p>
     <p style="margin:0 0 20px;color:#334155;font-size:15px;line-height:1.5">

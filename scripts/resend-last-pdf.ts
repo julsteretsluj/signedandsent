@@ -38,8 +38,12 @@ async function main() {
   );
   await fs.writeFile(pdfPath, updated);
 
-  const delegateName =
-    argValue("--delegate") ?? process.env.RESEND_DELEGATE_NAME ?? "Delegate";
+  const delegateFirstName =
+    argValue("--delegate-first") ??
+    process.env.RESEND_DELEGATE_FIRST ??
+    "Delegate";
+  const delegateLastName =
+    argValue("--delegate-last") ?? process.env.RESEND_DELEGATE_LAST ?? "Name";
   const parentName =
     argValue("--parent") ?? process.env.RESEND_PARENT_NAME ?? "Parent/Guardian";
 
@@ -49,7 +53,8 @@ async function main() {
     signatureMethod: submission.signatureType,
     signedPdf: updated,
     filename,
-    delegateName,
+    delegateFirstName,
+    delegateLastName,
     school: "—",
     parentName,
     emergencyContact: "—",

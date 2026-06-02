@@ -5,9 +5,11 @@ import { findAccessCode } from "@/lib/access-codes";
 import { createDownloadToken } from "@/lib/download-token";
 import { sendSubmissionEmails } from "@/lib/email";
 import { getPrisma, isDatabaseConfigured } from "@/lib/db-client";
+import type { ConsentFormFields } from "@/lib/consent-form-fields";
 import { fillAndSignConsentPdf } from "@/lib/pdf";
 import { dataUrlToPngBuffer } from "@/lib/signature";
 import { persistSignedPdf } from "@/lib/submission-storage";
+import { copyPdfToGoogleDrive } from "@/lib/google-drive";
 import { submitSchema } from "@/lib/validation";
 
 const ENV_FALLBACK_ACCESS_CODE_ID = "env-fallback";
@@ -20,7 +22,9 @@ export async function POST(request: Request) {
       email,
       signatureMethod,
       signatureImage,
-      delegateName,
+      delegateFirstName,
+      delegateMiddleName,
+      delegateLastName,
       preferredName,
       school,
       parentName,
@@ -36,8 +40,10 @@ export async function POST(request: Request) {
     }
 
     const signaturePng = dataUrlToPngBuffer(signatureImage);
-    const formFields = {
-      delegateName,
+    const formFields: ConsentFormFields = {
+      delegateFirstName,
+      delegateMiddleName,
+      delegateLastName,
       preferredName,
       school,
       parentName,
@@ -77,6 +83,15 @@ export async function POST(request: Request) {
 
     const filename = path.basename(signedPdfPath);
 
+    try {
+      await copyPdfToGoogleDrive(filename, signedPdf);
+    } catch (driveError) {
+      console.error(
+        "Google Drive copy error:",
+        driveError instanceof Error ? driveError.message : driveError
+      );
+    }
+
     let parentCopySent = false;
     let organiserNotified = false;
     try {
@@ -86,7 +101,9 @@ export async function POST(request: Request) {
         signatureMethod,
         signedPdf,
         filename,
-        delegateName,
+        delegateFirstName,
+        delegateMiddleName,
+        delegateLastName,
         preferredName,
         school,
         parentName,

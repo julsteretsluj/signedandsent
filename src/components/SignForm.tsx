@@ -14,7 +14,9 @@ import type { ConsentFormFields } from "@/lib/consent-form-fields";
 import type { SignatureMethod } from "@/lib/signature";
 
 const emptyFields: ConsentFormFields = {
-  delegateName: "",
+  delegateFirstName: "",
+  delegateMiddleName: "",
+  delegateLastName: "",
   preferredName: "",
   school: "",
   parentName: "",

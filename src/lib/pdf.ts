@@ -4,7 +4,11 @@ import path from "path";
 import type { ConsentCheckboxes } from "./consent-checkboxes";
 import { PDF_CHECKBOX_PLACEMENTS } from "./consent-checkboxes";
 import type { ConsentFormFields } from "./consent-form-fields";
-import { PDF_PREFERRED_NAME, PDF_TEXT_FIELDS } from "./consent-form-fields";
+import {
+  formatDelegateDisplayName,
+  PDF_DELEGATE_NAME,
+  PDF_TEXT_FIELDS,
+} from "./consent-form-fields";
 import { drawConsentCheckmarks } from "./pdf-checkmarks";
 import { OFFICIAL_CONSENT_DOCUMENT } from "./consent-form";
 
@@ -30,6 +34,21 @@ function drawFormFields(
   font: PDFFont,
   fields: ConsentFormFields
 ) {
+  const delegateName = formatDelegateDisplayName(fields);
+  const delegatePage = pages[PDF_DELEGATE_NAME.page];
+  if (delegatePage) {
+    delegatePage.drawText(
+      truncateForPdf(delegateName, PDF_DELEGATE_NAME.maxChars),
+      {
+        x: PDF_DELEGATE_NAME.x,
+        y: PDF_DELEGATE_NAME.y,
+        size: PDF_DELEGATE_NAME.size,
+        font,
+        color: rgb(0.05, 0.05, 0.05),
+      }
+    );
+  }
+
   for (const placement of PDF_TEXT_FIELDS) {
     const page = pages[placement.page];
     if (!page) continue;
@@ -44,24 +63,6 @@ function drawFormFields(
       font,
       color: rgb(0.05, 0.05, 0.05),
     });
-  }
-
-  const preferred = fields.preferredName?.trim();
-  if (preferred) {
-    const page = pages[PDF_PREFERRED_NAME.page];
-    if (page) {
-      const label = truncateForPdf(
-        `${PDF_PREFERRED_NAME.prefix}${preferred}`,
-        PDF_PREFERRED_NAME.maxChars + PDF_PREFERRED_NAME.prefix.length
-      );
-      page.drawText(label, {
-        x: PDF_PREFERRED_NAME.x,
-        y: PDF_PREFERRED_NAME.y,
-        size: PDF_PREFERRED_NAME.size,
-        font,
-        color: rgb(0.15, 0.15, 0.15),
-      });
-    }
   }
 }
 
@@ -152,7 +153,8 @@ export async function embedSignatureOnPdf(
   return fillAndSignConsentPdf(
     documentPath,
     {
-      delegateName: "",
+      delegateFirstName: "",
+      delegateLastName: "",
       school: "",
       parentName: "",
       emergencyContact: "",
