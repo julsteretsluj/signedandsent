@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { CodeEntryForm } from "@/components/CodeEntryForm";
-import { SHARED_ACCESS_CODE } from "@/lib/access-code";
+import {
+  SHARED_CONSENT_ACCESS_CODE,
+  SHARED_VISA_LETTER_ACCESS_CODE,
+} from "@/lib/access-code";
 
 export default function Home() {
   return (
@@ -10,10 +13,10 @@ export default function Home() {
           SEAMUN I 2027
         </p>
         <h1 className="font-display mt-4 text-4xl font-semibold leading-tight tracking-tight text-brand-navy sm:text-5xl">
-          Sign your parental consent in minutes
+          Sign your form in minutes
         </h1>
         <p className="mx-auto mt-4 max-w-lg text-lg leading-relaxed text-brand-ink">
-          Enter the access code from your invitation to open the consent form,
+          Enter the access code from your invitation to open the form,
           sign digitally, and submit — no printing required.
         </p>
       </section>
@@ -21,16 +24,31 @@ export default function Home() {
       <div className="mx-auto mt-8 max-w-md space-y-4">
         <div className="brand-panel-elevated px-5 py-5 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.1em] text-brand-royal">
-            Your access code
+            Consent access code
           </p>
           <p className="mt-2 font-mono text-3xl font-bold tracking-[0.2em] text-brand-navy">
-            {SHARED_ACCESS_CODE}
+            {SHARED_CONSENT_ACCESS_CODE}
           </p>
           <Link
-            href={`/sign/${SHARED_ACCESS_CODE}`}
+            href={`/sign/${SHARED_CONSENT_ACCESS_CODE}`}
             className="mt-4 inline-block text-sm font-semibold text-brand-royal underline decoration-brand-royal/35 underline-offset-4 transition hover:text-brand-royal-dark"
           >
             Go directly to the consent form →
+          </Link>
+        </div>
+
+        <div className="brand-panel-elevated px-5 py-5 text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-brand-royal">
+            Visa letter access code
+          </p>
+          <p className="mt-2 font-mono text-3xl font-bold tracking-[0.2em] text-brand-navy">
+            {SHARED_VISA_LETTER_ACCESS_CODE}
+          </p>
+          <Link
+            href={`/sign/${SHARED_VISA_LETTER_ACCESS_CODE}`}
+            className="mt-4 inline-block text-sm font-semibold text-brand-royal underline decoration-brand-royal/35 underline-offset-4 transition hover:text-brand-royal-dark"
+          >
+            Go directly to the visa letter →
           </Link>
         </div>
         <div className="brand-panel p-6 sm:p-8">
@@ -48,7 +66,7 @@ export default function Home() {
           {
             step: "2",
             title: "Review & sign",
-            text: "Read the consent form and sign by drawing, typing, or uploading.",
+            text: "Read the form and sign by drawing, typing, or uploading.",
           },
           {
             step: "3",

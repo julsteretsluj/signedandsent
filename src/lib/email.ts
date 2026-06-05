@@ -130,6 +130,162 @@ export async function sendSubmissionEmails(
   return result;
 }
 
+export type VisaLetterEmailParams = {
+  code: string;
+  email: string;
+  signedPdf: Buffer;
+  filename: string;
+  fullName: string;
+  passportNumber: string;
+  nationality: string;
+  conferenceRole: "delegate" | "chair" | "advisor";
+};
+
+/**
+ * Email the generated visa letter to:
+ * - the user-provided email address
+ * - information@seamun.com
+ *
+ * Both emails include: "please save this and print it out for your travels."
+ */
+export async function sendVisaLetterEmails(
+  params: VisaLetterEmailParams
+): Promise<SubmissionEmailResult> {
+  const result: SubmissionEmailResult = {
+    parentCopySent: false,
+    organiserNotified: false,
+  };
+
+  if (!isEmailConfigured()) {
+    return result;
+  }
+
+  const replyTo = getReplyToAddress();
+  const submittedAt = new Date().toLocaleString("en-GB", {
+    dateStyle: "full",
+    timeStyle: "short",
+  });
+
+  const attachment = {
+    filename: params.filename,
+    content: params.signedPdf,
+  };
+
+  const sends: Promise<void>[] = [];
+
+  // 1) User copy.
+  sends.push(
+    sendMail({
+      to: params.email,
+      replyTo,
+      subject: `Your SEAMUN visa letter for ${params.fullName}`,
+      html: visaLetterUserHtml(params, submittedAt),
+      attachments: [attachment],
+    })
+      .then(() => {
+        result.parentCopySent = true;
+      })
+      .catch((err) => {
+        console.error(
+          "Visa letter user email failed:",
+          err instanceof Error ? err.message : err
+        );
+      })
+  );
+
+  // 2) Secretariat / organiser copy.
+  sends.push(
+    sendMail({
+      to: CENTRAL_INBOX_EMAIL,
+      replyTo,
+      subject: `SEAMUN visa letter: ${params.fullName} (code ${params.code})`,
+      html: visaLetterOrganiserHtml(params, submittedAt),
+      attachments: [attachment],
+    })
+      .then(() => {
+        result.organiserNotified = true;
+      })
+      .catch((err) => {
+        console.error(
+          "Visa letter organiser email failed:",
+          err instanceof Error ? err.message : err
+        );
+      })
+  );
+
+  await Promise.all(sends);
+  return result;
+}
+
+function visaLetterUserHtml(
+  params: VisaLetterEmailParams,
+  submittedAt: string
+): string {
+  return emailShell(`
+    <h2 style="margin:0 0 8px;color:#0c2340;font-size:20px">Your SEAMUN visa letter</h2>
+    <p style="margin:0 0 12px;color:#334155;font-size:15px;line-height:1.5">
+      Dear participant,
+    </p>
+    <p style="margin:0 0 20px;color:#334155;font-size:15px;line-height:1.5">
+      Your visa letter is attached. Submitted on ${escapeHtml(submittedAt)}.
+    </p>
+    <p style="margin:0 0 20px;color:#334155;font-size:15px;line-height:1.5">
+      <strong>Please save this and print it out for your travels.</strong>
+    </p>
+    <h3 style="margin:0 0 8px;color:#0c2340;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em">
+      Submission details
+    </h3>
+    <table style="${tableStyle}">${visaLetterRows(params)}</table>
+    <p style="margin:20px 0 0;color:#64748b;font-size:13px;line-height:1.5">
+      If you have questions, contact information@seamun.com.
+    </p>
+    ${secretariatSignatureBlock()}
+  `);
+}
+
+function visaLetterOrganiserHtml(
+  params: VisaLetterEmailParams,
+  submittedAt: string
+): string {
+  return emailShell(`
+    <h2 style="margin:0 0 8px;color:#0c2340;font-size:20px">New SEAMUN visa letter submitted</h2>
+    <p style="margin:0 0 20px;color:#475569;font-size:15px;line-height:1.5">
+      A visa letter has been generated via Signed &amp; Sent. The completed PDF is attached.
+    </p>
+    <p style="margin:0 0 20px;color:#334155;font-size:15px;line-height:1.5">
+      <strong>Please save this and print it out for your travels.</strong>
+    </p>
+    ${sectionHeading("Submission details")}
+    <table style="${tableStyle}">${visaLetterRows(params, submittedAt)}</table>
+    ${secretariatSignatureBlock()}
+  `);
+}
+
+function visaLetterRows(
+  params: VisaLetterEmailParams,
+  submittedAt?: string
+): string {
+  const conferenceRoleLabel =
+    params.conferenceRole === "delegate"
+      ? "Delegate"
+      : params.conferenceRole === "chair"
+        ? "Chair"
+        : "Advisor";
+
+  const rows: string[] = [
+    row("Full name (as per passport)", params.fullName),
+    row("Passport number", params.passportNumber),
+    row("Nationality", params.nationality),
+    row("Conference role", conferenceRoleLabel),
+    row("Provided email", params.email),
+    row("Access code", params.code),
+  ];
+
+  if (submittedAt) rows.push(row("Submitted", submittedAt));
+
+  return rows.join("");
+}
+
 function buildOrganiserEmailHtml(
   params: SubmissionEmailParams,
   submittedAt: string

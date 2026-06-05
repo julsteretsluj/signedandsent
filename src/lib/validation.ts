@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CONSENT_CHECKBOX_CONFIG } from "./consent-checkboxes";
 import { consentFormFieldsSchema } from "./consent-form-fields";
+import { visaLetterFieldsSchema } from "./visa-letter-fields";
 
 export const lookupSchema = z.object({
   code: z
@@ -40,3 +41,15 @@ export const submitSchema = z
       }
     }
   });
+
+export const consentSubmitSchema = submitSchema;
+
+export const visaLetterSubmitSchema = z.object({
+  code: z.string().min(4).max(32).transform((c) => c.trim().toUpperCase()),
+  email: z.string().email("Please enter a valid email address"),
+  fullName: visaLetterFieldsSchema.shape.fullName,
+  passportNumber: visaLetterFieldsSchema.shape.passportNumber,
+  nationality: visaLetterFieldsSchema.shape.nationality,
+  conferenceRole: visaLetterFieldsSchema.shape.conferenceRole,
+});
+

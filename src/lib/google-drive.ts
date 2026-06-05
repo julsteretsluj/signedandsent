@@ -8,6 +8,8 @@ export const DEFAULT_GOOGLE_DRIVE_FOLDER_ID =
   "1kO3j1QfOJvaEkf-1rb-8Pz_Ro642Og41";
 
 const DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+const DRIVE_UPLOAD_MAX_ATTEMPTS = 3;
+const DRIVE_UPLOAD_RETRY_DELAY_MS = 750;
 
 type ServiceAccountCredentials = {
   client_email: string;
@@ -118,16 +120,35 @@ async function restrictToOrganiserInbox(
   );
 
   if (!alreadyShared) {
-    await drive.permissions.create({
-      fileId,
-      requestBody: {
-        type: "user",
-        role: "writer",
-        emailAddress: organiserEmail,
-      },
-      sendNotificationEmail: false,
-      supportsAllDrives: true,
-    });
+    try {
+      await drive.permissions.create({
+        fileId,
+        requestBody: {
+          type: "user",
+          role: "writer",
+          emailAddress: organiserEmail,
+        },
+        sendNotificationEmail: false,
+        supportsAllDrives: true,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      // Non-Google inboxes (e.g. Workspace aliases) require notification to invite.
+      if (message.includes("no Google Account associated")) {
+        await drive.permissions.create({
+          fileId,
+          requestBody: {
+            type: "user",
+            role: "writer",
+            emailAddress: organiserEmail,
+          },
+          sendNotificationEmail: true,
+          supportsAllDrives: true,
+        });
+        return;
+      }
+      throw error;
+    }
   }
 }
 
@@ -177,28 +198,62 @@ export async function uploadPdfToGoogleDrive(
   return true;
 }
 
+/**
+ * Upload a signed parental consent PDF to the organiser Drive folder.
+ * Failures are logged; they never block the parent submission.
+ */
+export async function copyConsentPdfToGoogleDrive(
+  filename: string,
+  pdf: Buffer
+): Promise<boolean> {
+  const driveFilename = filename.startsWith("consent-")
+    ? filename
+    : `consent-${filename}`;
+  return copyPdfToGoogleDrive(driveFilename, pdf);
+}
+
 /** Best-effort organiser backup; failures are logged and never shown to parents. */
 export async function copyPdfToGoogleDrive(
   filename: string,
   pdf: Buffer
 ): Promise<boolean> {
   if (!isGoogleDriveConfigured()) {
-    return false;
-  }
-
-  try {
-    const uploaded = await uploadPdfToGoogleDrive(filename, pdf);
-    if (uploaded) {
-      console.info(`Google Drive: organiser backup saved (${filename})`);
-    }
-    return uploaded;
-  } catch (error) {
-    console.error(
-      "Google Drive upload failed:",
-      error instanceof Error ? error.message : error
+    console.warn(
+      `Google Drive: skipped organiser backup (${filename}) because configuration is missing.`
     );
     return false;
   }
+
+  for (let attempt = 1; attempt <= DRIVE_UPLOAD_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const uploaded = await uploadPdfToGoogleDrive(filename, pdf);
+      if (uploaded) {
+        console.info(`Google Drive: organiser backup saved (${filename})`);
+      } else {
+        console.warn(
+          `Google Drive: upload returned false (${filename}) on attempt ${attempt}.`
+        );
+      }
+      return uploaded;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const isFinalAttempt = attempt === DRIVE_UPLOAD_MAX_ATTEMPTS;
+      console.error(
+        `Google Drive upload failed (${filename}) on attempt ${attempt}/${DRIVE_UPLOAD_MAX_ATTEMPTS}:`,
+        message
+      );
+
+      if (isFinalAttempt) {
+        return false;
+      }
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, DRIVE_UPLOAD_RETRY_DELAY_MS * attempt)
+      );
+    }
+  }
+
+  return false;
 }
 
 export { DRIVE_FILE_SCOPE };

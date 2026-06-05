@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { OFFICIAL_CONSENT_DOCUMENT } from "@/lib/consent-form";
-import { assertOfficialConsentPdfExists } from "@/lib/pdf";
+import {
+  OFFICIAL_CONSENT_DOCUMENT,
+  OFFICIAL_VISA_LETTER_DOCUMENT,
+} from "@/lib/consent-form";
+import {
+  assertOfficialConsentPdfExists,
+  assertOfficialVisaLetterPdfExists,
+} from "@/lib/pdf";
 import { prisma } from "@/lib/prisma";
 
 const createCodeSchema = z.object({
@@ -12,6 +18,10 @@ const createCodeSchema = z.object({
     .max(32)
     .optional()
     .transform((c) => c?.trim().toUpperCase()),
+  documentPath: z
+    .string()
+    .optional()
+    .transform((p) => p?.trim()),
 });
 
 function generateCode(): string {
@@ -33,8 +43,10 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { label, code: providedCode } = createCodeSchema.parse(body);
+    const { label, code: providedCode, documentPath } =
+      createCodeSchema.parse(body);
     const code = providedCode ?? generateCode();
+    const resolvedDocumentPath = documentPath ?? OFFICIAL_CONSENT_DOCUMENT;
 
     const existing = await prisma.accessCode.findUnique({ where: { code } });
     if (existing) {
@@ -44,13 +56,25 @@ export async function POST(request: Request) {
       );
     }
 
-    await assertOfficialConsentPdfExists();
+    if (resolvedDocumentPath === OFFICIAL_CONSENT_DOCUMENT) {
+      await assertOfficialConsentPdfExists();
+    } else if (resolvedDocumentPath === OFFICIAL_VISA_LETTER_DOCUMENT) {
+      await assertOfficialVisaLetterPdfExists();
+    } else {
+      return NextResponse.json(
+        {
+          error:
+            "Unsupported documentPath. Use the official consent or visa-letter template path.",
+        },
+        { status: 400 }
+      );
+    }
 
     const accessCode = await prisma.accessCode.create({
       data: {
         code,
         label: label?.trim() ?? "",
-        documentPath: OFFICIAL_CONSENT_DOCUMENT,
+        documentPath: resolvedDocumentPath,
       },
     });
 

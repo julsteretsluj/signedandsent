@@ -1,20 +1,47 @@
 import type { AccessCode } from "@/generated/prisma/client";
-import { SHARED_ACCESS_CODE } from "@/lib/access-code";
+import {
+  SHARED_CONSENT_ACCESS_CODE,
+  SHARED_VISA_LETTER_ACCESS_CODE,
+  LEGACY_CONSENT_ACCESS_CODE,
+} from "@/lib/access-code";
 import { getPrisma, isDatabaseConfigured } from "@/lib/db-client";
-import { OFFICIAL_CONSENT_DOCUMENT } from "@/lib/consent-form";
+import {
+  OFFICIAL_CONSENT_DOCUMENT,
+  OFFICIAL_VISA_LETTER_DOCUMENT,
+} from "@/lib/consent-form";
 
 function envFallbackAccessCode(code: string): AccessCode | null {
-  if (code !== SHARED_ACCESS_CODE) {
-    return null;
+  if (code === SHARED_CONSENT_ACCESS_CODE) {
+    return {
+      id: "env-fallback",
+      code,
+      label: "",
+      documentPath: OFFICIAL_CONSENT_DOCUMENT,
+      createdAt: new Date(0),
+    };
   }
 
-  return {
-    id: "env-fallback",
-    code,
-    label: "",
-    documentPath: OFFICIAL_CONSENT_DOCUMENT,
-    createdAt: new Date(0),
-  };
+  if (code === LEGACY_CONSENT_ACCESS_CODE) {
+    return {
+      id: "env-fallback",
+      code,
+      label: "",
+      documentPath: OFFICIAL_CONSENT_DOCUMENT,
+      createdAt: new Date(0),
+    };
+  }
+
+  if (code === SHARED_VISA_LETTER_ACCESS_CODE) {
+    return {
+      id: "env-fallback",
+      code,
+      label: "",
+      documentPath: OFFICIAL_VISA_LETTER_DOCUMENT,
+      createdAt: new Date(0),
+    };
+  }
+
+  return null;
 }
 
 /** Look up an access code, falling back to env config when the DB is unavailable. */

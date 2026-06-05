@@ -5,13 +5,21 @@ import {
   DELEGATE_NAME_FIELDS,
   type ConsentFormFields,
 } from "@/lib/consent-form-fields";
+import type { FormKind } from "@/lib/form-kind";
+import { getFormKindLabel } from "@/lib/form-kind";
 
 type ConsentFieldsFormProps = {
   values: ConsentFormFields;
   onChange: (values: ConsentFormFields) => void;
+  formKind: FormKind;
 };
 
-export function ConsentFieldsForm({ values, onChange }: ConsentFieldsFormProps) {
+export function ConsentFieldsForm({
+  values,
+  onChange,
+  formKind,
+}: ConsentFieldsFormProps) {
+  const formLabel = getFormKindLabel(formKind);
   function updateField<K extends keyof ConsentFormFields>(
     key: K,
     value: ConsentFormFields[K]
@@ -26,8 +34,8 @@ export function ConsentFieldsForm({ values, onChange }: ConsentFieldsFormProps) 
           Section 1 — Fill in your details
         </p>
         <p className="mt-0.5 text-xs text-slate-600">
-          These answers are typed here and placed on page 1 of the consent PDF
-          when you submit.
+          These answers are typed here and placed on page 1 of the {formLabel}{" "}
+          PDF when you submit.
         </p>
       </div>
       <div className="space-y-4 p-4">

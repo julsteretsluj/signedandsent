@@ -10,7 +10,10 @@ import {
   PDF_TEXT_FIELDS,
 } from "./consent-form-fields";
 import { drawConsentCheckmarks } from "./pdf-checkmarks";
-import { OFFICIAL_CONSENT_DOCUMENT } from "./consent-form";
+import {
+  OFFICIAL_CONSENT_DOCUMENT,
+  OFFICIAL_VISA_LETTER_DOCUMENT,
+} from "./consent-form";
 
 /**
  * Signature placement on page 2 (PDF coords, origin bottom-left).
@@ -166,16 +169,23 @@ export async function embedSignatureOnPdf(
 }
 
 export async function assertOfficialConsentPdfExists(): Promise<void> {
-  const absolutePath = path.join(
-    process.cwd(),
-    "public",
-    OFFICIAL_CONSENT_DOCUMENT
-  );
+  await assertPdfExists(OFFICIAL_CONSENT_DOCUMENT, "consent");
+}
+
+async function assertPdfExists(
+  documentPath: string,
+  docKind: "consent" | "visaLetter"
+): Promise<void> {
+  const absolutePath = path.join(process.cwd(), "public", documentPath);
   try {
     await fs.access(absolutePath);
   } catch {
     throw new Error(
-      `Official consent PDF not found at public/${OFFICIAL_CONSENT_DOCUMENT}`
+      `Official ${docKind} PDF not found at public/${documentPath}`
     );
   }
+}
+
+export async function assertOfficialVisaLetterPdfExists(): Promise<void> {
+  await assertPdfExists(OFFICIAL_VISA_LETTER_DOCUMENT, "visaLetter");
 }

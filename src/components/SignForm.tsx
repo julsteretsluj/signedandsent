@@ -12,6 +12,10 @@ import {
 } from "@/lib/consent-checkboxes";
 import type { ConsentFormFields } from "@/lib/consent-form-fields";
 import type { SignatureMethod } from "@/lib/signature";
+import type { FormKind } from "@/lib/form-kind";
+import { getFormKindLabel } from "@/lib/form-kind";
+import type { VisaLetterFields } from "@/lib/visa-letter-fields";
+import { VisaLetterFieldsForm } from "./VisaLetterFieldsForm";
 
 const emptyFields: ConsentFormFields = {
   delegateFirstName: "",
@@ -23,15 +27,26 @@ const emptyFields: ConsentFormFields = {
   emergencyContact: "",
 };
 
+const emptyVisaLetterFields: VisaLetterFields = {
+  fullName: "",
+  passportNumber: "",
+  nationality: "",
+  conferenceRole: "delegate",
+};
+
 type SignFormProps = {
   code: string;
   documentUrl: string;
+  formKind: FormKind;
 };
 
-export function SignForm({ code, documentUrl }: SignFormProps) {
+export function SignForm({ code, documentUrl, formKind }: SignFormProps) {
   const [formFields, setFormFields] = useState<ConsentFormFields>(emptyFields);
   const [consents, setConsents] =
     useState<Record<ConsentCheckboxKey, boolean>>(emptyConsentCheckboxes);
+  const [visaFields, setVisaFields] = useState<VisaLetterFields>(
+    emptyVisaLetterFields
+  );
   const [email, setEmail] = useState("");
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
   const [signatureMethod, setSignatureMethod] = useState<SignatureMethod | null>(
@@ -45,6 +60,10 @@ export function SignForm({ code, documentUrl }: SignFormProps) {
     email: string;
   } | null>(null);
 
+  const formLabel = getFormKindLabel(formKind);
+  const submitButtonLabel =
+    formKind === "visaLetter" ? "Submit signed visa letter" : "Submit signed consent";
+
   const handleSignatureReady = useCallback(
     (dataUrl: string | null, method: SignatureMethod | null) => {
       setSignatureImage(dataUrl);
@@ -57,29 +76,54 @@ export function SignForm({ code, documentUrl }: SignFormProps) {
     e.preventDefault();
     setError(null);
 
-    if (!consents.dataConsent || !consents.mediaConsent) {
-      setError("Please tick both consent statement boxes in Section 3 before submitting.");
-      return;
-    }
+    if (formKind === "consent") {
+      if (!consents.dataConsent || !consents.mediaConsent) {
+        setError("Please tick both consent statement boxes in Section 3 before submitting.");
+        return;
+      }
 
-    if (!signatureImage || !signatureMethod) {
-      setError("Please add your signature before submitting.");
-      return;
+      if (!signatureImage || !signatureMethod) {
+        setError("Please add your signature before submitting.");
+        return;
+      }
+    } else {
+      if (
+        !visaFields.fullName ||
+        !visaFields.passportNumber ||
+        !visaFields.nationality ||
+        !visaFields.conferenceRole
+      ) {
+        setError("Please complete all required visa letter fields.");
+        return;
+      }
+      if (!email) {
+        setError("Please enter your email address.");
+        return;
+      }
     }
 
     setLoading(true);
     try {
+      const payload =
+        formKind === "visaLetter"
+          ? {
+              code,
+              email,
+              ...visaFields,
+            }
+          : {
+              code,
+              email,
+              signatureMethod: signatureMethod!,
+              signatureImage: signatureImage!,
+              ...formFields,
+              ...consents,
+            };
+
       const res = await fetch("/api/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code,
-          email,
-          signatureMethod,
-          signatureImage,
-          ...formFields,
-          ...consents,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
 
@@ -108,8 +152,13 @@ export function SignForm({ code, documentUrl }: SignFormProps) {
         </div>
         <h2 className="text-xl font-semibold text-emerald-900">Signed &amp; sent!</h2>
         <p className="mt-2 text-emerald-800">
-          Thank you. Your signed parental consent has been submitted successfully.
+          Thank you. Your signed {formLabel} has been submitted successfully.
         </p>
+        {formKind === "visaLetter" && (
+          <p className="mt-3 text-sm text-emerald-800">
+            Please save this and print it out for your travels.
+          </p>
+        )}
         {success.parentCopySent ? (
           <p className="mt-3 text-sm text-emerald-800">
             A copy of your signed PDF has been emailed to{" "}
@@ -136,29 +185,43 @@ export function SignForm({ code, documentUrl }: SignFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <FormFillGuide />
+      {formKind === "consent" && <FormFillGuide />}
 
-      <ConsentFieldsForm values={formFields} onChange={setFormFields} />
+      {formKind === "consent" ? (
+        <ConsentFieldsForm
+          values={formFields}
+          onChange={setFormFields}
+          formKind={formKind}
+        />
+      ) : (
+        <VisaLetterFieldsForm values={visaFields} onChange={setVisaFields} />
+      )}
 
-      <DocumentViewer documentUrl={documentUrl} />
+      <DocumentViewer documentUrl={documentUrl} formKind={formKind} />
 
-      <ConsentCheckboxesForm values={consents} onChange={setConsents} />
+      {formKind === "consent" && (
+        <ConsentCheckboxesForm values={consents} onChange={setConsents} />
+      )}
 
       <div className="rounded-xl border border-brand-royal/20 bg-brand-royal-muted/70 px-4 py-3">
         <p className="text-sm font-medium text-brand-navy">
           Your digital signature
         </p>
         <p className="mt-1 text-xs text-brand-ink">
-          After ticking both consent statements above, add your signature below. It
-          appears on page 2 with today&apos;s date.
+          After ticking the required statements above, add your signature below.
+          It appears on page 2 with today&apos;s date.
         </p>
       </div>
-      <SignaturePanel onSignatureReady={handleSignatureReady} />
+      {formKind === "consent" && (
+        <SignaturePanel onSignatureReady={handleSignatureReady} />
+      )}
 
       <div className="brand-panel p-4">
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-brand-navy">
-            Your email address
+            {formKind === "visaLetter"
+              ? "Delegate/Chair/Advisor email"
+              : "Your email address"}
           </span>
           <input
             type="email"
@@ -169,7 +232,9 @@ export function SignForm({ code, documentUrl }: SignFormProps) {
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-brand-navy focus:border-brand-royal focus:outline-none focus:ring-2 focus:ring-brand-royal/25"
           />
           <p className="mt-1 text-xs text-slate-500">
-            We will email your signed PDF to this address after you submit.
+            {formKind === "visaLetter"
+              ? "We will email your visa letter to this address after you submit."
+              : "We will email your signed PDF to this address after you submit."}
           </p>
         </label>
       </div>
@@ -185,7 +250,7 @@ export function SignForm({ code, documentUrl }: SignFormProps) {
         disabled={loading}
         className="w-full rounded-xl bg-gradient-to-r from-brand-royal to-brand-royal-dark px-4 py-3.5 text-base font-semibold text-white shadow-lg shadow-brand-royal/30 transition hover:from-brand-royal-dark hover:to-brand-navy disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {loading ? "Submitting…" : "Submit signed consent"}
+        {loading ? "Submitting…" : submitButtonLabel}
       </button>
     </form>
   );
